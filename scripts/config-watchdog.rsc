@@ -37,6 +37,13 @@ add name=config-watchdog policy=read,write,test source={
     # including anything RouterOS generates dynamically (see GUIDE.md).
     # Get this number with: /ip firewall filter print count-only where dynamic=no
     :local expectedFilterCount <expected-static-rule-count>
+
+    # Optional: Telegram alert when issues are found. Leave telegramEnabled
+    # set to "no" if you don't want this — everything still gets logged
+    # locally either way. See GUIDE.md for how to get a token and chat ID.
+    :local telegramEnabled no
+    :local telegramToken "<your-bot-token>"
+    :local telegramChatId "<your-chat-id>"
     # ==========================================================================
 
     :local issues 0
@@ -90,6 +97,19 @@ add name=config-watchdog policy=read,write,test source={
         :log info "[watchdog] OK - all checks passed"
     } else={
         :log warning "[watchdog] $issues issue(s) found -- see warnings above"
+
+        :if ($telegramEnabled = yes) do={
+            :local msg ("MikroTik watchdog: " . $issues . " issue(s) found. Check router logs.")
+            :do {
+                /tool fetch http-method=post \
+                    url=("https://api.telegram.org/bot" . $telegramToken . "/sendMessage") \
+                    http-header-field="Content-Type:application/json" \
+                    http-data=("{\"chat_id\":\"" . $telegramChatId . "\",\"text\":\"" . $msg . "\"}") \
+                    output=none
+            } on-error={
+                :log warning "[watchdog] Failed to send Telegram alert (check token/chat-id/connectivity)"
+            }
+        }
     }
 }
 
