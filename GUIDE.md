@@ -97,6 +97,41 @@ If your rule-count check naively counts everything, you'll get a false "drift de
 
 This is a specific instance of a general rule worth internalizing for any RouterOS automation: **always check whether a feature you're using generates its own dynamic rules before writing a check that assumes a static rule table.** Hotspot is the one I hit; other features (like certain VPN or CAPsMAN setups) do similar things.
 
+## Optional: Telegram alerts
+
+Logs are only useful if someone looks at them. `config-watchdog.rsc` can optionally push a Telegram message the moment `issues > 0`, using RouterOS's built-in `/tool fetch` — no extra software, no SMTP server to configure.
+
+### Getting a token and chat ID
+
+1. In Telegram, message **@BotFather** → `/newbot` → follow the prompts → you get a token that looks like `123456789:AAHx...`.
+2. Message your new bot directly (find it by the `@username` BotFather gave you) — send it literally anything. Bots can't see a conversation until the human sends the first message; this is a Telegram anti-spam measure, not a bug.
+3. Open in a browser: `https://api.telegram.org/bot<your-token>/getUpdates`
+4. Find `"chat":{"id":<a number>` in the JSON response — that's your chat ID.
+
+**If step 3 returns `{"ok":true,"result":[]}`** (empty) — this almost always means step 2 didn't actually happen yet, or happened *before* you first called `getUpdates` and Telegram already considers it read. Send the bot a fresh message, then immediately re-check the URL. It should now show a `result` array with your message and the chat ID inside it.
+
+### Enabling it
+
+In the `CONFIGURE` block at the top of the script:
+
+```
+:local telegramEnabled yes
+:local telegramToken "<your-bot-token>"
+:local telegramChatId "<your-chat-id>"
+```
+
+### If the alert doesn't arrive
+
+The script wraps the Telegram call in `:do {} on-error={}` so a Telegram failure never breaks the actual security checks — but that also means the failure gets logged generically ("Failed to send Telegram alert") without the underlying reason. To see the real error, bypass the wrapper and test `/tool fetch` directly:
+
+```
+/tool fetch http-method=get url="https://api.telegram.org/bot<your-token>/getMe" output=user
+```
+
+- Returns bot info (`"ok":true,"result":{"id":...,"username":...}`) → token and connectivity are fine, the problem is in the chat ID or the POST call specifically.
+- Returns a RouterOS-level error (`dns error`, `connection timed out`, etc.) → check `/ping api.telegram.org` — if that fails to resolve, it's a DNS problem on the router, unrelated to Telegram itself.
+- Sent successfully but nothing arrives → double check `/system script print detail where name=config-watchdog` and confirm the `<your-bot-token>`/`<your-chat-id>` placeholders actually got replaced with real values before the script was imported.
+
 ## Extending this
 
 A few natural next steps, not included here to keep the base version simple to audit and trust:
