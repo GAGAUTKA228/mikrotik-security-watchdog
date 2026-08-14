@@ -20,7 +20,7 @@ This isn't a diff against a full config snapshot (too brittle — it'd flag ever
 | Specific services (FTP/Telnet/API/SSH/etc.) stay disabled | Catches a service silently re-enabled by a later change, a restore, or a mistake. |
 | Static firewall rule count matches expectation | Catches rules that vanished *or* got added unexpectedly — see the pitfall below. |
 
-Silent on success (aside from an INFO-level heartbeat, so you can confirm the schedule is actually still running). Logs a `warning` per failed check.
+Silent on success (aside from an INFO-level heartbeat, so you can confirm the schedule is actually still running). Logs a `warning` per failed check, and can optionally push a Telegram alert the moment something's wrong — see [GUIDE.md](GUIDE.md#optional-telegram-alerts).
 
 ## One real pitfall — read before you set the rule-count check
 
@@ -52,6 +52,7 @@ Full write-up in [GUIDE.md](GUIDE.md).
 
 - [mikrotik-hardening-toolkit](https://github.com/GAGAUTKA228/mikrotik-hardening-toolkit) — the baseline hardened setup this watchdog assumes and checks against.
 - [mikrotik-port-knocking](https://github.com/GAGAUTKA228/mikrotik-port-knocking) — optional add-on for gated remote admin access.
+- [mikrotik-backup-rotation](https://github.com/GAGAUTKA228/mikrotik-backup-rotation) — storage-bounded automatic config backups on a schedule.
 
 ## License
 
